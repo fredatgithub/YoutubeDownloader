@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Lazy;
 using YoutubeDownloader.Core.Utils;
 using YoutubeDownloader.Core.Utils.Extensions;
 using YoutubeExplode.Videos.Streams;
@@ -10,15 +11,12 @@ namespace YoutubeDownloader.Core.Downloading;
 public partial record VideoDownloadOption(
     Container Container,
     bool IsAudioOnly,
-    IReadOnlyList<IStreamInfo> StreamInfos)
+    IReadOnlyList<IStreamInfo> StreamInfos
+)
 {
-    public VideoQuality? VideoQuality => Memo.Cache(this, () =>
-        StreamInfos
-            .OfType<IVideoStreamInfo>()
-            .Select(s => s.VideoQuality)
-            .OrderByDescending(q => q)
-            .FirstOrDefault()
-    );
+    [Lazy]
+    public VideoQuality? VideoQuality =>
+        StreamInfos.OfType<IVideoStreamInfo>().MaxBy(s => s.VideoQuality)?.VideoQuality;
 }
 
 public partial record VideoDownloadOption
@@ -27,11 +25,11 @@ public partial record VideoDownloadOption
     {
         IEnumerable<VideoDownloadOption> GetVideoAndAudioOptions()
         {
-            var videoStreams = manifest
+            var videoStreamInfos = manifest
                 .GetVideoStreams()
                 .OrderByDescending(v => v.VideoQuality);
 
-            foreach (var videoStreamInfo in videoStreams)
+            foreach (var videoStreamInfo in videoStreamInfos)
             {
                 // Muxed stream
                 if (videoStreamInfo is MuxedStreamInfo)
