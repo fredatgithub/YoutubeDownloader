@@ -13,29 +13,32 @@ using YoutubeExplode.Videos.ClosedCaptions;
 
 namespace YoutubeDownloader.Core.Downloading;
 
-public class VideoDownloader
+public class VideoDownloader(IReadOnlyList<Cookie>? initialCookies = null)
 {
-    private readonly YoutubeClient _youtube;
-
-    public VideoDownloader(IReadOnlyList<Cookie>? initialCookies = null) =>
-        _youtube = new YoutubeClient(Http.Client, initialCookies ?? Array.Empty<Cookie>());
+    private readonly YoutubeClient _youtube = new(Http.Client, initialCookies ?? []);
 
     public async Task<IReadOnlyList<VideoDownloadOption>> GetDownloadOptionsAsync(
         VideoId videoId,
+        bool includeLanguageSpecificAudioStreams = true,
         CancellationToken cancellationToken = default
     )
     {
         var manifest = await _youtube.Videos.Streams.GetManifestAsync(videoId, cancellationToken);
-        return VideoDownloadOption.ResolveAll(manifest);
+        return VideoDownloadOption.ResolveAll(manifest, includeLanguageSpecificAudioStreams);
     }
 
     public async Task<VideoDownloadOption> GetBestDownloadOptionAsync(
         VideoId videoId,
         VideoDownloadPreference preference,
+        bool includeLanguageSpecificAudioStreams = true,
         CancellationToken cancellationToken = default
     )
     {
-        var options = await GetDownloadOptionsAsync(videoId, cancellationToken);
+        var options = await GetDownloadOptionsAsync(
+            videoId,
+            includeLanguageSpecificAudioStreams,
+            cancellationToken
+        );
 
         return preference.TryGetBestOption(options)
             ?? throw new InvalidOperationException("No suitable download option found.");
@@ -45,32 +48,37 @@ public class VideoDownloader
         string filePath,
         IVideo video,
         VideoDownloadOption downloadOption,
+        bool includeSubtitles = true,
         IProgress<Percentage>? progress = null,
         CancellationToken cancellationToken = default
     )
     {
-        // If the target container supports subtitles, embed them in the video too
-        var trackInfos = !downloadOption.Container.IsAudioOnly
-            ? (
-                await _youtube.Videos.ClosedCaptions.GetManifestAsync(video.Id, cancellationToken)
-            ).Tracks
-            : Array.Empty<ClosedCaptionTrackInfo>();
+        // Include subtitles in the output container
+        var trackInfos = new List<ClosedCaptionTrackInfo>();
+        if (includeSubtitles && !downloadOption.Container.IsAudioOnly)
+        {
+            var manifest = await _youtube.Videos.ClosedCaptions.GetManifestAsync(
+                video.Id,
+                cancellationToken
+            );
+
+            trackInfos.AddRange(manifest.Tracks);
+        }
 
         var dirPath = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrWhiteSpace(dirPath))
             Directory.CreateDirectory(dirPath);
 
-        await _youtube
-            .Videos
-            .DownloadAsync(
-                downloadOption.StreamInfos,
-                trackInfos,
-                new ConversionRequestBuilder(filePath)
-                    .SetContainer(downloadOption.Container)
-                    .SetPreset(ConversionPreset.Medium)
-                    .Build(),
-                progress?.ToDoubleBased(),
-                cancellationToken
-            );
+        await _youtube.Videos.DownloadAsync(
+            downloadOption.StreamInfos,
+            trackInfos,
+            new ConversionRequestBuilder(filePath)
+                .SetFFmpegPath(FFmpeg.TryGetCliFilePath() ?? "ffmpeg")
+                .SetContainer(downloadOption.Container)
+                .SetPreset(ConversionPreset.Medium)
+                .Build(),
+            progress?.ToDoubleBased(),
+            cancellationToken
+        );
     }
 }

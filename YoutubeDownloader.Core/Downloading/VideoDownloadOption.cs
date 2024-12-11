@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Lazy;
-using YoutubeDownloader.Core.Utils;
 using YoutubeDownloader.Core.Utils.Extensions;
 using YoutubeExplode.Videos.Streams;
 
@@ -14,14 +12,16 @@ public partial record VideoDownloadOption(
     IReadOnlyList<IStreamInfo> StreamInfos
 )
 {
-    [Lazy]
-    public VideoQuality? VideoQuality =>
+    public VideoQuality? VideoQuality { get; } =
         StreamInfos.OfType<IVideoStreamInfo>().MaxBy(s => s.VideoQuality)?.VideoQuality;
 }
 
 public partial record VideoDownloadOption
 {
-    internal static IReadOnlyList<VideoDownloadOption> ResolveAll(StreamManifest manifest)
+    internal static IReadOnlyList<VideoDownloadOption> ResolveAll(
+        StreamManifest manifest,
+        bool includeLanguageSpecificAudioStreams = true
+    )
     {
         IEnumerable<VideoDownloadOption> GetVideoAndAudioOptions()
         {
@@ -37,27 +37,55 @@ public partial record VideoDownloadOption
                     yield return new VideoDownloadOption(
                         videoStreamInfo.Container,
                         false,
-                        new[] { videoStreamInfo }
+                        [videoStreamInfo]
                     );
                 }
                 // Separate audio + video stream
                 else
                 {
-                    // Prefer audio stream with the same container
-                    var audioStreamInfo = manifest
+                    var audioStreamInfos = manifest
                         .GetAudioStreams()
+                        // Prefer audio streams with the same container
                         .OrderByDescending(s => s.Container == videoStreamInfo.Container)
                         .ThenByDescending(s => s is AudioOnlyStreamInfo)
                         .ThenByDescending(s => s.Bitrate)
-                        .FirstOrDefault();
+                        .ToArray();
 
-                    if (audioStreamInfo is not null)
+                    // Prefer language-specific audio streams, if available and if allowed
+                    var languageSpecificAudioStreamInfos = includeLanguageSpecificAudioStreams
+                        ? audioStreamInfos
+                            .Where(s => s.AudioLanguage is not null)
+                            .DistinctBy(s => s.AudioLanguage)
+                            // Default language first so it's encoded as the first audio track in the output file
+                            .OrderByDescending(s => s.IsAudioLanguageDefault)
+                            .ToArray()
+                        : [];
+
+                    // If there are language-specific streams, include them all
+                    if (languageSpecificAudioStreamInfos.Any())
                     {
                         yield return new VideoDownloadOption(
                             videoStreamInfo.Container,
                             false,
-                            new IStreamInfo[] { videoStreamInfo, audioStreamInfo }
+                            [videoStreamInfo, .. languageSpecificAudioStreamInfos]
                         );
+                    }
+                    // If there are no language-specific streams, download the single best quality audio stream
+                    else
+                    {
+                        var audioStreamInfo = audioStreamInfos
+                            // Prefer audio streams in the default language (or non-language-specific streams)
+                            .OrderByDescending(s => s.IsAudioLanguageDefault ?? true)
+                            .FirstOrDefault();
+
+                        if (audioStreamInfo is not null)
+                        {
+                            yield return new VideoDownloadOption(
+                                videoStreamInfo.Container,
+                                false,
+                                [videoStreamInfo, audioStreamInfo]
+                            );
+                        }
                     }
                 }
             }
@@ -69,29 +97,24 @@ public partial record VideoDownloadOption
             {
                 var audioStreamInfo = manifest
                     .GetAudioStreams()
-                    .OrderByDescending(s => s.Container == Container.WebM)
+                    // Prefer audio streams in the default language (or non-language-specific streams)
+                    .OrderByDescending(s => s.IsAudioLanguageDefault ?? true)
+                    // Prefer audio streams with the same container
+                    .ThenByDescending(s => s.Container == Container.WebM)
                     .ThenByDescending(s => s is AudioOnlyStreamInfo)
                     .ThenByDescending(s => s.Bitrate)
                     .FirstOrDefault();
 
                 if (audioStreamInfo is not null)
                 {
-                    yield return new VideoDownloadOption(
-                        Container.WebM,
-                        true,
-                        new[] { audioStreamInfo }
-                    );
+                    yield return new VideoDownloadOption(Container.WebM, true, [audioStreamInfo]);
 
-                    yield return new VideoDownloadOption(
-                        Container.Mp3,
-                        true,
-                        new[] { audioStreamInfo }
-                    );
+                    yield return new VideoDownloadOption(Container.Mp3, true, [audioStreamInfo]);
 
                     yield return new VideoDownloadOption(
                         new Container("ogg"),
                         true,
-                        new[] { audioStreamInfo }
+                        [audioStreamInfo]
                     );
                 }
             }
@@ -100,25 +123,24 @@ public partial record VideoDownloadOption
             {
                 var audioStreamInfo = manifest
                     .GetAudioStreams()
-                    .OrderByDescending(s => s.Container == Container.Mp4)
+                    // Prefer audio streams in the default language (or non-language-specific streams)
+                    .OrderByDescending(s => s.IsAudioLanguageDefault ?? true)
+                    // Prefer audio streams with the same container
+                    .ThenByDescending(s => s.Container == Container.Mp4)
                     .ThenByDescending(s => s is AudioOnlyStreamInfo)
                     .ThenByDescending(s => s.Bitrate)
                     .FirstOrDefault();
 
                 if (audioStreamInfo is not null)
                 {
-                    yield return new VideoDownloadOption(
-                        Container.Mp4,
-                        true,
-                        new[] { audioStreamInfo }
-                    );
+                    yield return new VideoDownloadOption(Container.Mp4, true, [audioStreamInfo]);
                 }
             }
         }
 
         // Deduplicate download options by video quality and container
-        var comparer = new DelegateEqualityComparer<VideoDownloadOption>(
-            (x, y) => x.VideoQuality == y.VideoQuality && x.Container == y.Container,
+        var comparer = EqualityComparer<VideoDownloadOption>.Create(
+            (x, y) => x?.VideoQuality == y?.VideoQuality && x?.Container == y?.Container,
             x => HashCode.Combine(x.VideoQuality, x.Container)
         );
 

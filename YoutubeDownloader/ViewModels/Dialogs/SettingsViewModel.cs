@@ -1,12 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
+using YoutubeDownloader.Framework;
 using YoutubeDownloader.Services;
-using YoutubeDownloader.ViewModels.Framework;
+using YoutubeDownloader.Utils;
+using YoutubeDownloader.Utils.Extensions;
 
 namespace YoutubeDownloader.ViewModels.Dialogs;
 
-public class SettingsViewModel : DialogScreen
+public class SettingsViewModel : DialogViewModelBase
 {
     private readonly SettingsService _settingsService;
+
+    private readonly DisposableCollector _eventRoot = new();
+
+    public SettingsViewModel(SettingsService settingsService)
+    {
+        _settingsService = settingsService;
+
+        _eventRoot.Add(_settingsService.WatchAllProperties(OnAllPropertiesChanged));
+    }
+
+    public IReadOnlyList<ThemeVariant> AvailableThemes { get; } = Enum.GetValues<ThemeVariant>();
+
+    public ThemeVariant Theme
+    {
+        get => _settingsService.Theme;
+        set => _settingsService.Theme = value;
+    }
 
     public bool IsAutoUpdateEnabled
     {
@@ -14,16 +34,22 @@ public class SettingsViewModel : DialogScreen
         set => _settingsService.IsAutoUpdateEnabled = value;
     }
 
-    public bool IsDarkModeEnabled
-    {
-        get => _settingsService.IsDarkModeEnabled;
-        set => _settingsService.IsDarkModeEnabled = value;
-    }
-
     public bool IsAuthPersisted
     {
         get => _settingsService.IsAuthPersisted;
         set => _settingsService.IsAuthPersisted = value;
+    }
+
+    public bool ShouldInjectLanguageSpecificAudioStreams
+    {
+        get => _settingsService.ShouldInjectLanguageSpecificAudioStreams;
+        set => _settingsService.ShouldInjectLanguageSpecificAudioStreams = value;
+    }
+
+    public bool ShouldInjectSubtitles
+    {
+        get => _settingsService.ShouldInjectSubtitles;
+        set => _settingsService.ShouldInjectSubtitles = value;
     }
 
     public bool ShouldInjectTags
@@ -50,5 +76,13 @@ public class SettingsViewModel : DialogScreen
         set => _settingsService.ParallelLimit = Math.Clamp(value, 1, 10);
     }
 
-    public SettingsViewModel(SettingsService settingsService) => _settingsService = settingsService;
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _eventRoot.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
 }
