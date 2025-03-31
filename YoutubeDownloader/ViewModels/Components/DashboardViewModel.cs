@@ -33,11 +33,11 @@ public partial class DashboardViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(ProcessQueryCommand))]
     [NotifyCanExecuteChangedFor(nameof(ShowAuthSetupCommand))]
     [NotifyCanExecuteChangedFor(nameof(ShowSettingsCommand))]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ProcessQueryCommand))]
-    private string? _query;
+    public partial string? Query { get; set; }
 
     public DashboardViewModel(
         ViewModelManager viewModelManager,
@@ -191,6 +191,7 @@ public partial class DashboardViewModel : ViewModelBase
             if (result.Videos.Count == 1)
             {
                 var video = result.Videos.Single();
+
                 var downloadOptions = await downloader.GetDownloadOptionsAsync(
                     video.Id,
                     _settingsService.ShouldInjectLanguageSpecificAudioStreams
@@ -204,6 +205,8 @@ public partial class DashboardViewModel : ViewModelBase
                     return;
 
                 EnqueueDownload(download);
+
+                Query = "";
             }
             // Multiple videos
             else if (result.Videos.Count > 1)
@@ -224,6 +227,8 @@ public partial class DashboardViewModel : ViewModelBase
 
                 foreach (var download in downloads)
                     EnqueueDownload(download);
+
+                Query = "";
             }
             // No videos found
             else
