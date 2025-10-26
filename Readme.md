@@ -19,7 +19,7 @@
 </p>
 
 **YoutubeDownloader** is an application that lets you download videos from YouTube.
-You can copy-paste URL of any video, playlist or channel and download it directly to a format of your choice.
+You can copy-paste URL of any video, playlist or channel and download it directly in a format of your choice.
 It also supports searching by keywords, which is helpful if you want to quickly look up and download videos.
 
 > **Note**:
@@ -41,6 +41,10 @@ To learn more about the war and how you can help, [click here](https://tyrrrz.me
 
 - 🟢 **[Stable release](https://github.com/Tyrrrz/YoutubeDownloader/releases/latest)**
 - 🟠 [CI build](https://github.com/Tyrrrz/YoutubeDownloader/actions/workflows/main.yml)
+
+> **Important**:
+> To launch the app on MacOS, you need to first remove the downloaded file from quarantine.
+> You can do that by running the following command in the terminal: `xattr -rd com.apple.quarantine YoutubeDownloader.app`.
 
 > **Note**:
 > If you're unsure which build is right for your system, consult with [this page](https://useragent.cc) to determine your OS and CPU architecture.
