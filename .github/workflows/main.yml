@@ -26,12 +26,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
-        with:
-          dotnet-version: 9.0.x
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
 
       # Build the project separately to discern between build and format errors
       - name: Build
@@ -83,12 +81,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
-        with:
-          dotnet-version: 9.0.x
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
 
       - name: Publish app
         run: >
@@ -103,7 +99,7 @@ jobs:
           --self-contained
 
       - name: Upload app binaries
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ${{ matrix.artifact-name-base }}.${{ matrix.rid }}
           path: YoutubeDownloader/bin/publish
@@ -166,7 +162,7 @@ jobs:
 
     steps:
       - name: Download app binaries
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: ${{ matrix.artifact-name-base }}.${{ matrix.rid }}
           path: YoutubeDownloader/
@@ -176,7 +172,7 @@ jobs:
         run: |
           [ -f YoutubeDownloader/YoutubeDownloader ] && chmod +x YoutubeDownloader/YoutubeDownloader || true
           [ -f YoutubeDownloader/ffmpeg ] && chmod +x YoutubeDownloader/ffmpeg || true
-          
+
           # macOS bundle
           [ -f YoutubeDownloader/YoutubeDownloader.app/Contents/MacOS/YoutubeDownloader ] && chmod +x YoutubeDownloader/YoutubeDownloader.app/Contents/MacOS/YoutubeDownloader || true
           [ -f YoutubeDownloader/YoutubeDownloader.app/Contents/MacOS/ffmpeg ] && chmod +x YoutubeDownloader/YoutubeDownloader.app/Contents/MacOS/ffmpeg || true
