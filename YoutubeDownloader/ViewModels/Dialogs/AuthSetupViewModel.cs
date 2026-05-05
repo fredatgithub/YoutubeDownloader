@@ -1,19 +1,38 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using PowerKit.Extensions;
 using YoutubeDownloader.Framework;
+using YoutubeDownloader.Localization;
 using YoutubeDownloader.Services;
-using YoutubeDownloader.Utils;
-using YoutubeDownloader.Utils.Extensions;
 
 namespace YoutubeDownloader.ViewModels.Dialogs;
 
 public class AuthSetupViewModel : DialogViewModelBase
 {
     private readonly SettingsService _settingsService;
+    private readonly IDisposable _eventSubscription;
 
-    private readonly DisposableCollector _eventRoot = new();
+    public AuthSetupViewModel(
+        LocalizationManager localizationManager,
+        SettingsService settingsService
+    )
+    {
+        LocalizationManager = localizationManager;
+        _settingsService = settingsService;
+
+        _eventSubscription = _settingsService.WatchProperty(
+            o => o.LastAuthCookies,
+            _ =>
+            {
+                OnPropertyChanged(nameof(Cookies));
+                OnPropertyChanged(nameof(IsAuthenticated));
+            }
+        );
+    }
+
+    public LocalizationManager LocalizationManager { get; }
 
     public IReadOnlyList<Cookie>? Cookies
     {
@@ -29,27 +48,11 @@ public class AuthSetupViewModel : DialogViewModelBase
             .Where(c => c.Name.StartsWith("__SECURE", StringComparison.OrdinalIgnoreCase))
             .All(c => !c.Expired && c.Expires.ToUniversalTime() > DateTime.UtcNow);
 
-    public AuthSetupViewModel(SettingsService settingsService)
-    {
-        _settingsService = settingsService;
-
-        _eventRoot.Add(
-            _settingsService.WatchProperty(
-                o => o.LastAuthCookies,
-                () =>
-                {
-                    OnPropertyChanged(nameof(Cookies));
-                    OnPropertyChanged(nameof(IsAuthenticated));
-                }
-            )
-        );
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _eventRoot.Dispose();
+            _eventSubscription.Dispose();
         }
 
         base.Dispose(disposing);

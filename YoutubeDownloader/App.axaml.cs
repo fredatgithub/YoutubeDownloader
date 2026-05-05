@@ -7,24 +7,24 @@ using Avalonia.Platform;
 using AvaloniaWebView;
 using Material.Styles.Themes;
 using Microsoft.Extensions.DependencyInjection;
+using PowerKit.Extensions;
 using YoutubeDownloader.Framework;
+using YoutubeDownloader.Localization;
 using YoutubeDownloader.Services;
-using YoutubeDownloader.Utils;
-using YoutubeDownloader.Utils.Extensions;
 using YoutubeDownloader.ViewModels;
 using YoutubeDownloader.ViewModels.Components;
 using YoutubeDownloader.ViewModels.Dialogs;
-using YoutubeDownloader.Views;
 
 namespace YoutubeDownloader;
 
 public class App : Application, IDisposable
 {
-    private readonly DisposableCollector _eventRoot = new();
-
     private readonly ServiceProvider _services;
     private readonly SettingsService _settingsService;
-    private readonly MainViewModel _mainViewModel;
+
+    private readonly IDisposable _eventSubscription;
+
+    private bool _isDisposed;
 
     public App()
     {
@@ -35,6 +35,9 @@ public class App : Application, IDisposable
         services.AddSingleton<SnackbarManager>();
         services.AddSingleton<ViewManager>();
         services.AddSingleton<ViewModelManager>();
+
+        // Localization
+        services.AddSingleton<LocalizationManager>();
 
         // Services
         services.AddSingleton<SettingsService>();
@@ -52,39 +55,22 @@ public class App : Application, IDisposable
 
         _services = services.BuildServiceProvider(true);
         _settingsService = _services.GetRequiredService<SettingsService>();
-        _mainViewModel = _services.GetRequiredService<ViewModelManager>().CreateMainViewModel();
 
         // Re-initialize the theme when the user changes it
-        _eventRoot.Add(
-            _settingsService.WatchProperty(
-                o => o.Theme,
-                () =>
+        _eventSubscription = _settingsService.WatchProperty(
+            o => o.Theme,
+            v =>
+            {
+                RequestedThemeVariant = v switch
                 {
-                    RequestedThemeVariant = _settingsService.Theme switch
-                    {
-                        ThemeVariant.Light => Avalonia.Styling.ThemeVariant.Light,
-                        ThemeVariant.Dark => Avalonia.Styling.ThemeVariant.Dark,
-                        _ => Avalonia.Styling.ThemeVariant.Default,
-                    };
+                    ThemeVariant.Light => Avalonia.Styling.ThemeVariant.Light,
+                    ThemeVariant.Dark => Avalonia.Styling.ThemeVariant.Dark,
+                    _ => Avalonia.Styling.ThemeVariant.Default,
+                };
 
-                    InitializeTheme();
-                }
-            )
+                InitializeTheme();
+            }
         );
-    }
-
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        AvaloniaXamlLoader.Load(this);
-    }
-
-    public override void RegisterServices()
-    {
-        base.RegisterServices();
-
-        AvaloniaWebViewBuilder.Initialize(config => config.IsInPrivateModeEnabled = true);
     }
 
     private void InitializeTheme()
@@ -102,18 +88,44 @@ public class App : Application, IDisposable
                 : Theme.Create(Theme.Dark, Color.Parse("#E8E8E8"), Color.Parse("#F9A825"));
     }
 
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void RegisterServices()
+    {
+        base.RegisterServices();
+
+        AvaloniaWebViewBuilder.Initialize(config => config.IsInPrivateModeEnabled = true);
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainView { DataContext = _mainViewModel };
-
-        base.OnFrameworkInitializationCompleted();
-
-        // Set up custom theme colors
-        InitializeTheme();
-
         // Load settings
         _settingsService.Load();
+
+        // Initialize and configure the main window
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var viewManager = _services.GetRequiredService<ViewManager>();
+            var viewModelManager = _services.GetRequiredService<ViewModelManager>();
+
+            desktop.MainWindow = viewManager.TryBindWindow(viewModelManager.GetMainViewModel());
+
+            // Although `App.Dispose()` is invoked from `Program.Main(...)`, on some platforms
+            // it may be called too late in the shutdown lifecycle. Attach an exit
+            // handler to ensure timely disposal as a safeguard.
+            // https://github.com/Tyrrrz/YoutubeDownloader/issues/795
+            desktop.Exit += (_, _) => Dispose();
+        }
+
+        // Initialize the theme for the first time; must be done after the main window is created
+        InitializeTheme();
+
+        base.OnFrameworkInitializationCompleted();
     }
 
     private void Application_OnActualThemeVariantChanged(object? sender, EventArgs args) =>
@@ -122,7 +134,12 @@ public class App : Application, IDisposable
 
     public void Dispose()
     {
-        _eventRoot.Dispose();
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+
+        _eventSubscription.Dispose();
         _services.Dispose();
     }
 }
