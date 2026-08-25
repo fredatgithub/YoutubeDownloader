@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Gress;
@@ -17,7 +16,6 @@ using YoutubeDownloader.Core.Tagging;
 using YoutubeDownloader.Framework;
 using YoutubeDownloader.Localization;
 using YoutubeDownloader.Services;
-using YoutubeDownloader.Utils.Extensions;
 using YoutubeExplode.Exceptions;
 
 namespace YoutubeDownloader.ViewModels.Components;
@@ -101,10 +99,10 @@ public partial class DashboardViewModel : ViewModelBase
             _localizationManager.CloseButton
         );
 
+        // If the user declined, open settings to nudge them to set a custom FFmpeg path
         if (await _dialogManager.ShowDialogAsync(dialog) != true)
         {
-            if (Application.Current?.ApplicationLifetime?.TryShutdown(3) != true)
-                Environment.Exit(3);
+            await _dialogManager.ShowDialogAsync(_viewModelManager.GetSettingsViewModel());
             return;
         }
 
@@ -129,6 +127,8 @@ public partial class DashboardViewModel : ViewModelBase
                     ex.Message
                 )
             );
+
+            App.Shutdown(3);
         }
         finally
         {

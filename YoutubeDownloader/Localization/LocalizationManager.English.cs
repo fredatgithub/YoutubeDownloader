@@ -114,8 +114,11 @@ public partial class LocalizationManager
                 """,
             [nameof(SeeReleasesButton)] = "SEE RELEASES",
             [nameof(FFmpegMissingTitle)] = "FFmpeg is missing",
-            [nameof(FFmpegMissingMessage)] =
-                "FFmpeg was not found on your system. It is required for {0} to work. Would you like to download it now?",
+            [nameof(FFmpegMissingMessage)] = """
+                FFmpeg was not found on your system. It is required for {0} to work. Would you like to download it now?
+
+                Alternatively, you can close this dialog and manually set a custom FFmpeg path in settings.
+                """,
             [nameof(FFmpegDownloadingTitle)] = "Downloading FFmpeg...",
             [nameof(FFmpegDownloadCompletedTitle)] = "FFmpeg downloaded",
             [nameof(NothingFoundTitle)] = "Nothing found",

@@ -1,21 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using YoutubeDownloader.Framework;
-using YoutubeDownloader.Localization;
 
 namespace YoutubeDownloader.ViewModels.Dialogs;
 
 public partial class MessageBoxViewModel : DialogViewModelBase
 {
-    public MessageBoxViewModel(LocalizationManager localizationManager)
-    {
-        LocalizationManager = localizationManager;
-
-        DefaultButtonText = LocalizationManager.CloseButton;
-        CancelButtonText = LocalizationManager.CancelButton;
-    }
-
-    public LocalizationManager LocalizationManager { get; }
-
     [ObservableProperty]
     public partial string? Title { get; set; }
 

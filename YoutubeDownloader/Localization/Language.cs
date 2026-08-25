@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace YoutubeDownloader.Localization;
 
 public enum Language
@@ -10,7 +8,6 @@ public enum Language
     German,
     French,
     Spanish,
-
-    [Display(Name = "Simplified Chinese")]
     ChineseSimplified,
+    Hungarian,
 }

@@ -114,8 +114,11 @@ public partial class LocalizationManager
                 """,
             [nameof(SeeReleasesButton)] = "ПЕРЕГЛЯНУТИ РЕЛІЗИ",
             [nameof(FFmpegMissingTitle)] = "FFmpeg відсутній",
-            [nameof(FFmpegMissingMessage)] =
-                "FFmpeg не знайдено на вашому пристрої. Він потрібен для роботи {0}. Бажаєте завантажити його зараз?",
+            [nameof(FFmpegMissingMessage)] = """
+                FFmpeg не знайдено на вашому пристрої. Він потрібен для роботи {0}. Бажаєте завантажити його зараз?
+
+                Або ви можете закрити це діалогове вікно та вручну вказати власний шлях до FFmpeg у налаштуваннях.
+                """,
             [nameof(FFmpegDownloadingTitle)] = "Завантаження FFmpeg...",
             [nameof(FFmpegDownloadCompletedTitle)] = "FFmpeg завантажено",
             [nameof(NothingFoundTitle)] = "Нічого не знайдено",

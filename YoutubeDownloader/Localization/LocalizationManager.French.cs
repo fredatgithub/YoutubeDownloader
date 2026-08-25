@@ -118,8 +118,11 @@ public partial class LocalizationManager
             """,
         [nameof(SeeReleasesButton)] = "VOIR LES VERSIONS",
         [nameof(FFmpegMissingTitle)] = "FFmpeg est manquant",
-        [nameof(FFmpegMissingMessage)] =
-            "FFmpeg est introuvable sur votre système. Il est requis pour que {0} fonctionne. Voulez-vous le télécharger maintenant ?",
+        [nameof(FFmpegMissingMessage)] = """
+            FFmpeg est introuvable sur votre système. Il est requis pour que {0} fonctionne. Voulez-vous le télécharger maintenant ?
+
+            Sinon, vous pouvez fermer cette boîte de dialogue et définir manuellement un chemin FFmpeg personnalisé dans les paramètres.
+            """,
         [nameof(FFmpegDownloadingTitle)] = "Téléchargement de FFmpeg...",
         [nameof(FFmpegDownloadCompletedTitle)] = "FFmpeg téléchargé",
         [nameof(NothingFoundTitle)] = "Rien trouvé",

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using PowerKit.Extensions;
 using YoutubeDownloader.Core.Downloading;
+using YoutubeDownloader.Localization;
 using YoutubeDownloader.ViewModels;
 using YoutubeDownloader.ViewModels.Components;
 using YoutubeDownloader.ViewModels.Dialogs;
@@ -10,7 +11,7 @@ using YoutubeExplode.Videos;
 
 namespace YoutubeDownloader.Framework;
 
-public class ViewModelManager(IServiceProvider services)
+public class ViewModelManager(IServiceProvider services, LocalizationManager localizationManager)
 {
     public MainViewModel GetMainViewModel() => services.GetRequiredService<MainViewModel>();
 
@@ -97,15 +98,8 @@ public class ViewModelManager(IServiceProvider services)
         return viewModel;
     }
 
-    public MessageBoxViewModel GetMessageBoxViewModel(string title, string message)
-    {
-        var viewModel = services.GetRequiredService<MessageBoxViewModel>();
-
-        viewModel.Title = title;
-        viewModel.Message = message;
-
-        return viewModel;
-    }
+    public MessageBoxViewModel GetMessageBoxViewModel(string title, string message) =>
+        GetMessageBoxViewModel(title, message, localizationManager.CloseButton, null);
 
     public SettingsViewModel GetSettingsViewModel() =>
         services.GetRequiredService<SettingsViewModel>();
